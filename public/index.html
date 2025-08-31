@@ -5,12 +5,38 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chat-container">
+    <div class="auth-container">
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('register')">Регистрация</button>
+            <button class="tab" onclick="showTab('login')">Вход</button>
+        </div>
+        <div id="register" class="tab-content active">
+            <h2>Регистрация</h2>
+            <input id="regNickname" type="text" placeholder="Никнейм (3-15 символов)" required>
+            <input id="regPassword" type="password" placeholder="Пароль (6+ символов)" required>
+            <input id="regAvatar" type="file" accept="image/*" required>
+            <span id="regError" class="error"></span>
+            <button onclick="register()">Зарегистрироваться</button>
+        </div>
+        <div id="login" class="tab-content">
+            <h2>Вход</h2>
+            <input id="loginNickname" type="text" placeholder="Никнейм" required>
+            <input id="loginPassword" type="password" placeholder="Пароль" required>
+            <span id="loginError" class="error"></span>
+            <button onclick="login()">Войти</button>
+        </div>
+    </div>
+    <div id="chat-container" class="chat-container" style="display: none;">
+        <div class="user-info">
+            <img id="userAvatar" src="" alt="Аватар" class="avatar">
+            <span id="userNickname"></span>
+        </div>
         <ul id="messages" class="messages"></ul>
         <div class="input-area">
             <input id="msg" type="text" placeholder="Введите сообщение...">
             <button onclick="sendMessage()">Отправить</button>
         </div>
+        <button id="themeToggle" onclick="toggleTheme()">Сменить тему</button>
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
