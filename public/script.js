@@ -1,148 +1,100 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    transition: background-color 0.3s, color 0.3s;
+const socket = io();
+const messages = document.getElementById('messages');
+const msgInput = document.getElementById('msg');
+const authContainer = document.querySelector('.auth-container');
+const chatContainer = document.getElementById('chat-container');
+let currentUser = null;
+
+socket.on('chat message', (msg) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<strong>${msg.nickname}</strong>: ${msg.text}`;
+    messages.appendChild(li);
+    messages.scrollTo(0, messages.scrollHeight); // Плавный скролл
+});
+
+function register() {
+    const nickname = document.getElementById('regNickname').value;
+    const password = document.getElementById('regPassword').value;
+    const avatarInput = document.getElementById('regAvatar');
+    const error = document.getElementById('regError');
+
+    if (!/^[a-zA-Z0-9]{3,15}$/.test(nickname)) {
+        error.textContent = 'Никнейм: 3-15 символов, только буквы и цифры';
+        return;
+    }
+    if (password.length < 6) {
+        error.textContent = 'Пароль должен быть минимум 6 символов';
+        return;
+    }
+    if (!avatarInput.files || !avatarInput.files[0]) {
+        error.textContent = 'Выберите изображение для аватара';
+        return;
+    }
+
+    const file = avatarInput.files[0];
+    if (!file.type.match('image.*')) {
+        error.textContent = 'Файл должен быть изображением';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const avatarBase64 = e.target.result;
+        error.textContent = '';
+        socket.emit('register', { nickname, password, avatar: avatarBase64 });
+    };
+    reader.readAsDataURL(file);
 }
 
-body.dark {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+function login() {
+    const nickname = document.getElementById('loginNickname').value;
+    const password = document.getElementById('loginPassword').value;
+    const error = document.getElementById('loginError');
+
+    if (!nickname || !password) {
+        error.textContent = 'Заполните все поля';
+        return;
+    }
+
+    error.textContent = '';
+    socket.emit('login', { nickname, password });
 }
 
-body.light {
-    background-color: #f0f0f0;
-    color: #333;
+socket.on('auth success', (user) => {
+    currentUser = user;
+    document.getElementById('userNickname').textContent = user.nickname;
+    document.getElementById('userAvatar').src = user.avatar;
+    authContainer.style.display = 'none';
+    chatContainer.style.display = 'block';
+});
+
+socket.on('error', (msg) => {
+    document.getElementById('regError' in msg ? 'regError' : 'loginError').textContent = msg;
+});
+
+function sendMessage() {
+    const msg = msgInput.value.trim();
+    if (msg && currentUser) {
+        socket.emit('chat message', { text: msg, nickname: currentUser.nickname });
+        msgInput.value = '';
+    }
 }
 
-.auth-container, .chat-container {
-    width: 400px;
-    background: var(--bg-color, #fff);
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    box-sizing: border-box;
+msgInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
+
+function showTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
 }
 
-.tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+function toggleTheme() {
+    document.body.classList.toggle('dark');
+    document.body.classList.toggle('light');
+    localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
 }
 
-.tab {
-    padding: 10px 20px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-weight: bold;
-    color: var(--text-color, #333);
-}
-
-.tab.active {
-    border-bottom: 2px solid var(--accent-color, #4caf50);
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-input {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid var(--border-color, #ddd);
-    border-radius: 5px;
-    box-sizing: border-box;
-    background: var(--input-bg, #fff);
-    color: var(--text-color, #333);
-}
-
-.error {
-    color: #f44336;
-    font-size: 0.9em;
-    display: block;
-    margin-top: 5px;
-}
-
-button {
-    width: 100%;
-    padding: 10px;
-    background: var(--accent-color, #4caf50);
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-button:hover {
-    background: var(--accent-hover, #45a049);
-}
-
-#chat-container .user-info {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color, #ddd);
-}
-
-.avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    margin-right: 15px;
-    object-fit: cover;
-}
-
-.messages {
-    flex: 1;
-    list-style-type: none;
-    padding: 10px;
-    margin: 0;
-    overflow-y: auto;
-    max-height: 400px;
-    border-bottom: 1px solid var(--border-color, #ddd);
-    background: var(--msg-bg, #e0f7fa);
-}
-
-.messages li {
-    background: var(--msg-item-bg, #d1e8eb);
-    margin: 5px 0;
-    padding: 10px;
-    border-radius: 5px;
-    word-wrap: break-word;
-}
-
-.messages li strong {
-    color: var(--accent-color, #4caf50);
-}
-
-.input-area {
-    display: flex;
-    padding: 10px 0;
-}
-
-#msg {
-    flex: 1;
-    margin-right: 10px;
-}
-
-#themeToggle {
-    width: auto;
-    margin-top: 10px;
-    background: var(--secondary-bg, #757575);
-}
-
-#themeToggle:hover {
-    background: var(--secondary-hover, #616161);
-}
+document.body.classList.add(localStorage.getItem('theme') || 'light');
